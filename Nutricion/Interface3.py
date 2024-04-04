@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import sqlite3
-import re
+
 
 class mywindow3(tk.Frame):
     
@@ -43,8 +43,9 @@ class mywindow3(tk.Frame):
         conexion.close()
         for i in data[2]:
             i.delete(0,'end')        
-        for i in data[0]:
+        for i in data[1]:
             i.delete(0,'end')
+        self.llenar_listbox()
 
     def insert_base_datos2(self,data):
         ultimo_valor = self.obtener_ultimo_valor()+1
@@ -62,6 +63,7 @@ class mywindow3(tk.Frame):
             i.delete(0,'end')
         data[4].delete(0,'end')
         data[0].delete(0,'end')
+        self.llenar_listbox()
 
     def insert_base_datos3(self,data):
         conexion = sqlite3.connect("mibasedatos.db")
@@ -82,6 +84,7 @@ class mywindow3(tk.Frame):
             ingredientes.append(item)
         for entry in data[1]:
             cantidades.append(entry.get())
+        self.llenar_listbox()
                 
         conexion = sqlite3.connect("mibasedatos.db")
         cursor = conexion.cursor()
@@ -108,9 +111,9 @@ class mywindow3(tk.Frame):
     def calc_agregados(self,l1,label,entry,entry2,event):
         lista=l1.get(0, 'end')
         TOTCal,TOThc,TOTprot,TOTgras,TOTfib=0,0,0,0,0
-        for i, valor in enumerate(lista):
-            conexion = sqlite3.connect("mibasedatos.db")
-            cursor = conexion.cursor()
+        conexion = sqlite3.connect("mibasedatos.db")
+        cursor = conexion.cursor()
+        for i, valor in enumerate(lista):            
             consulta = """
             SELECT CALORIAS,grCarb,grProt,grGrasa,Fibra 
             FROM TABLA_NUTRICIONAL
@@ -118,23 +121,50 @@ class mywindow3(tk.Frame):
             """
             cursor.execute(consulta, (valor,))
             fila = cursor.fetchone()
-            TOTCal+=round(float(entry[i].get())*fila[0]/100,2)
-            TOThc+=  round(float(entry[i].get())*fila[1]/100,2)
-            TOTprot+=round(float(entry[i].get())*fila[2]/100,2)
-            TOTgras+=round(float(entry[i].get())*fila[3]/100,2)
-            TOTfib+= round(float(entry[i].get())*fila[4]/100,2)
-            label[0]['text']=str(TOTCal)
-            label[1]['text']=str(TOThc)
-            label[2]['text']=str(TOTprot)
-            label[3]['text']=str(TOTgras)
-            label[4]['text']=str(TOTfib)
-            label[5]['text']=str(round(TOTCal/float(entry2.get()),2))
-            label[6]['text']=str(round(TOThc/float(entry2.get()),2))
-            label[7]['text']=str(round(TOTprot/float(entry2.get()),2))
-            label[8]['text']=str(round(TOTgras/float(entry2.get()),2))
-            label[9]['text']=str(round(TOTfib/float(entry2.get()),2))
+            TOTCal+=float(entry[i].get())*fila[0]/100
+            TOThc+=  float(entry[i].get())*fila[1]/100
+            TOTprot+=float(entry[i].get())*fila[2]/100
+            TOTgras+=float(entry[i].get())*fila[3]/100
+            TOTfib+= float(entry[i].get())*fila[4]/100
+            
+        label[0]['text']=str(round(TOTCal,2))
+        label[1]['text']=str(round(TOThc,2))
+        label[2]['text']=str(round(TOTprot,2))
+        label[3]['text']=str(round(TOTgras,2))
+        label[4]['text']=str(round(TOTfib,2))
+        label[5]['text']=str(round(TOTCal/float(entry2.get()),2))
+        label[6]['text']=str(round(TOThc/float(entry2.get()),2))
+        label[7]['text']=str(round(TOTprot/float(entry2.get()),2))
+        label[8]['text']=str(round(TOTgras/float(entry2.get()),2))
+        label[9]['text']=str(round(TOTfib/float(entry2.get()),2))
         conexion.commit()
         conexion.close()      
+
+    def llenar_listbox(self):
+        conexion = sqlite3.connect("mibasedatos.db")
+        cursor = conexion.cursor()
+        cursor.execute("SELECT ALIMENTO, COCCION FROM TABLA_NUTRICIONAL")
+        alimentos = []
+        for fila in cursor.fetchall():
+            alimento_completo = f"{fila[0]} {fila[1]}"
+            alimentos.append(alimento_completo)
+        for lista in alimentos:
+          self.listboxf1p2.insert(tk.END,lista)
+        conexion.close()
+
+    def filter_listbox(self,event):      
+        pattern = self.entf1p2.get().lower()
+        if pattern=='':
+            self.listboxf1p2.delete(0,tk.END)
+            self.llenar_listbox()
+        else:
+            updated_list = []
+            for item in self.listboxf1p2.get(0, tk.END):
+                if pattern in item.lower():
+                    updated_list.append(item)
+            self.listboxf1p2.delete(0, tk.END)
+            for item in updated_list:
+                self.listboxf1p2.insert(tk.END, item)
 
     def create_notebook(self):
         p1 = ttk.Frame(self.notebook)
@@ -189,28 +219,27 @@ class mywindow3(tk.Frame):
         btnf1.pack()
 
         #Frame 1 de la segunda pestaña
-        lblf1p2=tk.Label(Frame2[0], text='Alimento:').pack()
-        listboxf1p2=tk.Listbox(Frame2[0],width=22)                
-        listboxf1p2.pack()
-        conexion = sqlite3.connect("mibasedatos.db")
-        cursor = conexion.cursor()
-        cursor.execute("SELECT ALIMENTO, COCCION FROM TABLA_NUTRICIONAL")
-        alimentos = []
-        for fila in cursor.fetchall():
-            alimento_completo = f"{fila[0]} {fila[1]}"
-            alimentos.append(alimento_completo)
-        for lista in alimentos:
-           listboxf1p2.insert(tk.END,lista)
-        conexion.close()
+        lblf1p2=tk.Label(Frame2[0], text='Alimento:')
+        self.entf1p2=tk.Entry(Frame2[0])
+        self.listboxf1p2=tk.Listbox(Frame2[0],width=22)  
+        scroll=ttk.Scrollbar(Frame2[0],orient='vertical',command=self.listboxf1p2.yview)
+        self.listboxf1p2.configure(yscrollcommand=scroll.set)              
+        lblf1p2.grid(row=0,column=0,columnspan=2)
+        self.entf1p2.grid(row=1,column=0,columnspan=2)
+        self.listboxf1p2.grid(row=2,column=1,sticky='nse')
+        scroll.grid(row=2,column=1,sticky='nse')
+        self.llenar_listbox()
+        self.entf1p2.bind("<KeyRelease>", self.filter_listbox)
+        
                
        #Frame 2 de la segunda pestaña
         lblf1p2=tk.Label(Frame2[1], text='Plato:')
         entryf2p2=tk.Entry(Frame2[1], width=16)
-        listboxf2p2=tk.Listbox(Frame2[1], width=22) 
+        listboxf2p2=tk.Listbox(Frame2[1], width=22,height=11) 
         lblf1p2.grid(row=0,column=0)
         entryf2p2.grid(row=0,column=1)
         listboxf2p2.grid(row=1,column=0,rowspan=8,columnspan=2)
-        listboxf1p2.bind("<Double-Button-1>", lambda event: self.insertar_datos_listbox(listboxf1p2,listboxf2p2,event))
+        self.listboxf1p2.bind("<Double-Button-1>", lambda event: self.insertar_datos_listbox(self.listboxf1p2,listboxf2p2,event))
                 
         entryf3p2=[]
         lblf3p2=tk.Label(Frame2[1], text='Cant')

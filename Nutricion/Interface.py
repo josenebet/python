@@ -56,14 +56,23 @@ class mywindow(tk.Frame):
         value= float(event.widget.get())
         value2=valor_combo_box.get()  
                       
-        dffila=self.df.loc[self.df['nueva columna'] == value2]
-        fila2=dffila.to_numpy().tolist()
+        conexion = sqlite3.connect("mibasedatos.db")
+        cursor = conexion.cursor()
+        consulta = """
+        SELECT CALORIAS,grCarb,grProt,grGrasa,Fibra 
+        FROM TABLA_NUTRICIONAL
+        WHERE ALIMENTOCOCCION = ?
+        """
+        conexion = sqlite3.connect("mibasedatos.db")
+        cursor = conexion.cursor()
+        cursor.execute(consulta, (value2,))
+        fila2 = cursor.fetchone()
 
-        Calorias = round(((value/100)*float(fila2[0][3])/self.GET2)*100,2)
-        HCarb = round(((value/100)*float(fila2[0][4])/self.GETcarbo)*100,2)
-        Proteina = round(((value/100)*float(fila2[0][5])/self.GETProteina)*100,2)
-        Fibra = round((value/100)*float(fila2[0][7]),2)
-        Grasa = round(((value/100)*float(fila2[0][6])/self.GETGrasa)*100,2)             
+        Calorias = round(((value/100)*float(fila2[0])/self.GET2)*100,2)
+        HCarb = round(((value/100)*float(fila2[1])/self.GETcarbo)*100,2)
+        Proteina = round(((value/100)*float(fila2[2])/self.GETProteina)*100,2)
+        Fibra = round((value/100)*float(fila2[4]),2)
+        Grasa = round(((value/100)*float(fila2[3])/self.GETGrasa)*100,2)             
         listAux=[Calorias,HCarb,Proteina,Grasa,Fibra]
         for i in range(len(self.list_lbl_tabla[0])):
             self.list_lbl_tabla[relativo][i]=str(listAux[i])
@@ -87,7 +96,6 @@ class mywindow(tk.Frame):
             combo_box['values']=self.listacomb
         else:
             data=[]
-
             for item in self.listacomb:
                 if value.lower() in item.lower():
                     data.append(item)
@@ -128,12 +136,18 @@ class mywindow(tk.Frame):
         self.EntPORGrasa["values"]=self.opciones_dependientes2[opcion_seleccionada]["Grasa"]        
     
     def actualizar_segundo_combobox(self,event):
+        opciones_dependientes = {
+        "Sedentario": ["1", "1.1"],
+        "Ligero": ["1.2", "1.3"],
+        "Activo": ["1.4","1.5"],
+        "Muy Activo": ["1.6","1.7"],
+        "Extremadamente Activo": ["1.8","1.9"],}
         # Obtener la selección del primer combobox
         opcion_seleccionada = self.combo_ActFis.get()
         # Limpiar el segundo combobox
         self.combo_ActFis2.set("")
         # Agregar las opciones correspondientes al segundo combobox
-        self.combo_ActFis2["values"] = self.opciones_dependientes[opcion_seleccionada]
+        self.combo_ActFis2["values"] = opciones_dependientes[opcion_seleccionada]
     
     def Calc_GET_Gramos (self):
         self.GETProteina= self.GET2*(int(self.EntPORProteina.get())/100)/4
@@ -146,9 +160,9 @@ class mywindow(tk.Frame):
          
     def Calc_GET(self,sexo):
         if sexo =='Femenino':
-            TMB=655.09+(9.563*float(self.Ent_Peso.get()))+(1.84*float(self.Ent_Estatura.get()))-(4.676*float(self.Ent_Edad.get()))
+            TMB=655.09+(9.563*float(self.entryIdentificacion[3].get()))+(1.84*float(self.entryIdentificacion[4].get()))-(4.676*float(self.entryIdentificacion[2].get()))
         else:
-            TMB=66.47+(13.75*float(self.Ent_Peso.get()))+(5*float(self.Ent_Estatura.get()))-(6.75*float(self.Ent_Edad.get()))
+            TMB=66.47+(13.75*float(self.entryIdentificacion[3].get()))+(5*float(self.entryIdentificacion[4].get()))-(6.75*float(self.entryIdentificacion[2].get()))
 
         self.GET=TMB*float(self.combo_ActFis2.get())*1.1
         self.lbl_GET.config(text='Resultado GET: '+str(round(self.GET,2))+' Kcal/dia')
@@ -167,7 +181,7 @@ class mywindow(tk.Frame):
         self.lbl_IMGIMC.config(image=self.imagen_tk)
 
     def Calc_IMC(self):
-        IMC= (float(self.Ent_Peso.get())/(float(self.Ent_Estatura.get())/100)**2)
+        IMC= (float(self.entryIdentificacion[3].get())/(float(self.entryIdentificacion[4].get())/100)**2)
         self.lbl_IMC['text']='Resultado IMC:\n'+ str(round(IMC,2))
         if IMC >= 30:
             self.mostrar_imagen('obesidad')
@@ -196,7 +210,7 @@ class mywindow(tk.Frame):
         cursor.execute("""
             INSERT INTO PACIENTES (NOMBRE, CEDULA, EDAD,IMC,GET,GETHC,GETPROT,GETGRASA)
             VALUES (?, ?, ?,?,?,?,?,?)
-        """,(self.Ent_Nombre.get(), self.Ent_CI.get(), self.Ent_Edad.get(),w[0],x[0],z[0],y[0],zz[0]))
+        """,(self.entryIdentificacion[0].get(), self.entryIdentificacion[1].get(), self.entryIdentificacion[2].get(),w[0],x[0],z[0],y[0],zz[0]))
         conexion.commit()
         conexion.close()
         
@@ -225,127 +239,53 @@ class mywindow(tk.Frame):
     def Create_widget(self):
 
         FrameP= tk.Frame(self)
-        
-        Frame1= tk.Frame(FrameP)
-        FrameN= tk.Frame(Frame1)
-        FrameCI=tk.Frame(Frame1)
-        FrameEdad= tk.Frame(Frame1)
-        FramePeso= tk.Frame(Frame1)
-        FrameEstatura= tk.Frame(Frame1)
-        FrameSexo= tk.Frame(Frame1)
-        FrameActFis= tk.Frame(Frame1)
-        FrameBtn1= tk.Frame(Frame1)
-        
-        Frame2=tk.Frame(FrameP)
-        FrameIMC= tk.Frame(Frame2)
-        Frame_IMGIMC= tk.Frame(Frame2)
-        Frame_GET= tk.Frame(Frame2)
-
-        Frame3=tk.Frame(FrameP)
-        FrameGET2=tk.Frame(Frame3)
-        FrameCombGET2=tk.Frame(Frame3)
-        FrameENTGET2=tk.Frame(Frame3)
-        FrameBTn2=tk.Frame(Frame3)
-
-        Frame4=tk.Frame(FrameP)
-        FramePorcentaje=tk.Frame(Frame4)
-        FrameTotGET=tk.Frame(Frame4)
-        FrameBtn3=tk.Frame(Frame4)
-
-        Frame5=tk.Frame(FrameP)
-        self.FrameTreeview=tk.Frame(Frame5)        
-
-
         FrameP.pack()
-        Frame1.grid(row=0,column=0)
-        FrameN.grid(row=0,column=0)
-        FrameCI.grid(row=0,column=1)
-        FrameEdad.grid(row=0,column=2)
-        FramePeso.grid(row=0,column=3)
-        FrameEstatura.grid(row=0,column=4)
-        FrameSexo.grid(row=1,column=0,columnspan=1)
-        FrameActFis.grid(row=1,column=2,columnspan=2)
-        FrameBtn1.grid(row=2,column=0,columnspan=5)
-        Frame2.grid(row=1,column=0)
-        FrameIMC.grid(row=0,column=0)
-        Frame_IMGIMC.grid(row=0,column=1)
-        Frame_GET.grid(row=0,column=2)
+        Frame=[]
+        for i in range (5):
+            Frame.append(tk.Frame(FrameP))
+            Frame[i].grid(row=i,column=0)
+        
+        #Primer Frame
+        texts=['Nombre:','C.I:','Edad:','Peso (Kg):','Estatura (cm):']
+        labelIdentificacion=[]
+        self.entryIdentificacion=[]
+        for j,i in enumerate(texts):
+            labelIdentificacion.append(tk.Label(Frame[0],text=i))
+            self.entryIdentificacion.append(tk.Entry(Frame[0],width='10',font=('Arial',10)))
+            labelIdentificacion[j].grid(row=0,column=j*2)
+            self.entryIdentificacion[j].grid(row=0,column=(j*2)+1)
+        self.entryIdentificacion[0].config(width=30)
 
-        Frame3.grid(row=2,column=0)
-        FrameGET2.grid(row=0,column=0)
-        FrameCombGET2.grid(row=0,column=1)
-        FrameENTGET2.grid(row=0,column=2)
-        FrameBTn2.grid(row=1,column=0, columnspan=3)
-
-        Frame4.grid(row=3,column=0)
-        FramePorcentaje.grid(row=0,column=0)
-        FrameTotGET.grid(row=0,column=1)
-        FrameBtn3.grid(row=2,column=0,columnspan=2)
-
-        Frame5.grid(row=4,column=0)
-        self.FrameTreeview.pack()       
-
-        self.lbl_Nombre= tk.Label (FrameN,text='Nombre:')
-        self.lbl_CI= tk.Label (FrameCI,text='C.I:')
-        self.lbl_Edad= tk.Label (FrameEdad,text='Edad:')
-        self.lbl_Peso= tk.Label (FramePeso,text='Peso (Kg):')
-        self.lbl_Estatura= tk.Label (FrameEstatura,text='Estatura (cm):')
-        self.Ent_Nombre= tk.Entry(FrameN, width='30',  font=("Arial", 10))
-        self.Ent_CI= tk.Entry(FrameCI, width='10',  font=("Arial", 10))
-        self.Ent_Edad= tk.Entry(FrameEdad, width='10',  font=("Arial", 10))
-        self.Ent_Peso= tk.Entry(FramePeso, width='10',  font=("Arial", 10))
-        self.Ent_Estatura= tk.Entry(FrameEstatura, width='10',  font=("Arial", 10))
-
-        self.lbl_sexo= tk.Label (FrameSexo,text='Sexo:')   
+        self.lbl_sexo= tk.Label (Frame[0],text='Sexo:')   
         self.combo_varsexo=  tk.StringVar()  
-        self.combo_sexo = ttk.Combobox(FrameSexo, textvariable=self.combo_varsexo, values=['Femenino', 'Masculino'])
-       
-        self.opciones_dependientes = {
-        "Sedentario": ["1", "1.1"],
-        "Ligero": ["1.2", "1.3"],
-        "Activo": ["1.4","1.5"],
-        "Muy Activo": ["1.6","1.7"],
-        "Extremadamente Activo": ["1.8","1.9"],}
+        self.combo_sexo = ttk.Combobox(Frame[0], textvariable=self.combo_varsexo, values=['Femenino', 'Masculino'])
+               
         self.combo_ActFis=  tk.StringVar() 
         self.combo_ActFis2=  tk.StringVar() 
-        self.lbl_ActFis= tk.Label (FrameActFis,text='Actividad Fisica:')       
-        self.combo_ActFis = ttk.Combobox(FrameActFis, textvariable=self.combo_ActFis, values=list(self.opciones_dependientes.keys()))
-        self.combo_ActFis2 = ttk.Combobox(FrameActFis)
+        self.lbl_ActFis= tk.Label (Frame[0],text='Actividad Fisica:')       
+        self.combo_ActFis = ttk.Combobox(Frame[0], textvariable=self.combo_ActFis, values=["Sedentario","Ligero","Activo","Muy Activo","Extremadamente Activo"])
+        self.combo_ActFis2 = ttk.Combobox(Frame[0])
         self.combo_ActFis.bind("<<ComboboxSelected>>", self.actualizar_segundo_combobox)
+        self.Btn1tn1= tk.Button(Frame[0], text='Aceptar', command=lambda: self.Calc_IMC())
+        
+        self.combo_sexo.grid(row=1,column=1)
+        self.lbl_sexo.grid(row=1,column=0)
+        self.lbl_ActFis.grid(row=1,column=2)
+        self.combo_ActFis.grid(row=1,column=3)
+        self.combo_ActFis2.grid(row=1,column=4)
+        self.Btn1tn1.grid(row=3,column=0,columnspan=10)
 
-
-        self.lbl_Nombre.grid(row=0,column=0)
-        self.lbl_CI.grid(row=0,column=0)
-        self.lbl_Edad.grid(row=0,column=0)
-        self.lbl_Peso.grid(row=0,column=0)
-        self.lbl_Estatura.grid(row=0,column=0)
-
-        self.Ent_Nombre.grid(row=0,column=1)
-        self.Ent_CI.grid(row=0,column=1)
-        self.Ent_Edad.grid(row=0,column=1)
-        self.Ent_Peso.grid(row=0,column=1)
-        self.Ent_Estatura.grid(row=0,column=1)
-
-        self.combo_sexo.grid(row=0,column=1)
-        self.lbl_sexo.grid(row=0,column=0)
-        self.lbl_ActFis.grid(row=0,column=0)
-        self.combo_ActFis.grid(row=0,column=1)
-        self.combo_ActFis2.grid(row=0,column=2)
-
-        self.Btn1tn1= tk.Button(FrameBtn1, text='Aceptar', command=lambda: self.Calc_IMC())
-        self.Btn1tn1.pack()
-
-        self.lbl_IMC= tk.Label (FrameIMC,text='Resultado IMC:') 
+        #Segundo Frame        
+        self.lbl_IMC= tk.Label (Frame[1],text='Resultado IMC:') 
         self.imagen_tk2 = ImageTk.PhotoImage(Image.open("images/normal.png").resize((61,161)))
-        self.lbl_IMGIMC= tk.Label(Frame_IMGIMC, image=self.imagen_tk2)
+        self.lbl_IMGIMC= tk.Label(Frame[1], image=self.imagen_tk2)
+        self.lbl_GET= tk.Label (Frame[1],text='Resultado GET: 0 Kcal/dia')
+        self.lbl_IMC.grid(row=0,column=0)
+        self.lbl_IMGIMC.grid(row=0,column=1)        
+        self.lbl_GET.grid(row=0,column=2)
 
-        self.lbl_IMC.pack()
-        self.lbl_IMGIMC.pack()
-
-        self.lbl_GET= tk.Label (Frame_GET,text='Resultado GET: 0 Kcal/dia')
-        self.lbl_GET.pack()
-
-        self.lblGET2=tk.Label(FrameGET2,text='Requerimiento Calorico: 0 Kcal/dia')
+        #Tercer Frame
+        self.lblGET2=tk.Label(Frame[2],text='Requerimiento Calorico: 0 Kcal/dia')
         self.opciones_dependientes2 = {
         "Deficit Calorico": {
             "Proteina": ["30", "31","32","33","34","35","36","37","38","39","40"],
@@ -363,16 +303,22 @@ class mywindow(tk.Frame):
             "Grasa": ["20"],
         }, }
         self.combo_vartabla=  tk.StringVar()  
-        self.combo_Tabla = ttk.Combobox(FrameCombGET2, textvariable=self.combo_vartabla, values=list(self.opciones_dependientes2.keys()))
-        self.Ent_Valor= tk.Entry(FrameENTGET2, width='10',  font=("Arial", 10))
-        self.Btn2= tk.Button(FrameBTn2, text='Aceptar', command= lambda: self.Calc_GET2(self.combo_vartabla.get()))
+        self.combo_Tabla = ttk.Combobox(Frame[2], textvariable=self.combo_vartabla, values=list(self.opciones_dependientes2.keys()))
+        self.Ent_Valor= tk.Entry(Frame[2], width='10',  font=("Arial", 10))
+        self.Btn2= tk.Button(Frame[2], text='Aceptar', command= lambda: self.Calc_GET2(self.combo_vartabla.get()))
         self.combo_Tabla.bind("<<ComboboxSelected>>", self.actualizar_tres_combobox)
+        self.lblGET2.grid(row=0,column=0) 
+        self.combo_Tabla.grid(row=0,column=1)
+        self.Ent_Valor.grid(row=0,column=2)
+        self.Btn2.grid(row=1,column=0,columnspan=3)
 
-        self.lblGET2.pack() 
-        self.combo_Tabla.pack()
-        self.Ent_Valor.pack()
-        self.Btn2.pack()
-
+        #Cuarto Frame
+        FramePorcentaje=tk.Frame(Frame[3])
+        FrameTotGET=tk.Frame(Frame[3])
+        FrameBtn3=tk.Frame(Frame[3])
+        FramePorcentaje.grid(row=0,column=0)
+        FrameTotGET.grid(row=0,column=1)
+        FrameBtn3.grid(row=2,column=0,columnspan=2)
         self.lblPORProteina=tk.Label(FramePorcentaje,text= f'% de Proteina')
         self.lblPORHC=tk.Label(FramePorcentaje,text= f'% de HC')
         self.lblPORGrasa=tk.Label(FramePorcentaje,text= f'% de Grasa')
@@ -410,63 +356,59 @@ class mywindow(tk.Frame):
         self.lblGETGrasaGRS.grid(row=2,column=1)
         self.lblAUX.grid(row=3,column=1)
         self.Btn3.pack()
-       
 
+        #Quinto Frame
+        self.FrameTreeview=tk.Frame(Frame[4])      
+        self.FrameTreeview.pack()    
         self.LBLTV= tk.Label(self.FrameTreeview,text='Alimento', background='white', relief='ridge', width=20)
 
-        self.df=pd.read_excel('Tabla Nutricional.xlsx')
-        self.df['nueva columna']=self.df["Alimento"] +" "+ self.df["Coccion"]
-        self.listacomb=self.df['nueva columna'].tolist()         
-               
-
-        self.CombTV2= ttk.Combobox(self.FrameTreeview, values=self.listacomb)
-        self.CombTV3= ttk.Combobox(self.FrameTreeview, values=self.listacomb)
-        self.CombTV4= ttk.Combobox(self.FrameTreeview, values=self.listacomb)
-        self.CombTV5= ttk.Combobox(self.FrameTreeview, values=self.listacomb)
-        self.CombTV6= ttk.Combobox(self.FrameTreeview, values=self.listacomb)
-        self.CombTV7= ttk.Combobox(self.FrameTreeview, values=self.listacomb)
-        self.CombTV8= ttk.Combobox(self.FrameTreeview, values=self.listacomb)
-        self.CombTV9= ttk.Combobox(self.FrameTreeview, values=self.listacomb)
-        self.CombTV10= ttk.Combobox(self.FrameTreeview, values=self.listacomb)
-
-        self.CombTV2.bind('<KeyRelease>', lambda event: self.search_combobox(self.CombTV2, event))
-        self.CombTV3.bind('<KeyRelease>', lambda event: self.search_combobox(self.CombTV3, event))
-        self.CombTV4.bind('<KeyRelease>', lambda event: self.search_combobox(self.CombTV4, event))
-        self.CombTV5.bind('<KeyRelease>', lambda event: self.search_combobox(self.CombTV5, event))
-        self.CombTV6.bind('<KeyRelease>', lambda event: self.search_combobox(self.CombTV6, event))
-        self.CombTV7.bind('<KeyRelease>', lambda event: self.search_combobox(self.CombTV7, event))
-        self.CombTV8.bind('<KeyRelease>', lambda event: self.search_combobox(self.CombTV8, event))
-        self.CombTV9.bind('<KeyRelease>', lambda event: self.search_combobox(self.CombTV9, event))
-        self.CombTV10.bind('<KeyRelease>', lambda event: self.search_combobox(self.CombTV10, event))
+        conexion = sqlite3.connect("mibasedatos.db")
+        cursor = conexion.cursor()
+        cursor.execute("SELECT ALIMENTOCOCCION FROM TABLA_NUTRICIONAL")
+        self.listacomb = cursor.fetchall()
+        conexion.close() 
+        self.listacomb = list(map(lambda x: x[0], self.listacomb))
+        self.listacomb = [alimento.strip("{}") for alimento in self.listacomb]            
         
+        CombTV=[]
+        for i in range(9):
+            CombTV.append(ttk.Combobox(self.FrameTreeview, values=self.listacomb))
+            CombTV[i].grid(row=i+1,column=0)
+        
+        CombTV[0].bind('<KeyRelease>', lambda event: self.search_combobox(CombTV[0], event))
+        CombTV[1].bind('<KeyRelease>', lambda event: self.search_combobox(CombTV[1], event))
+        CombTV[2].bind('<KeyRelease>', lambda event: self.search_combobox(CombTV[2], event))
+        CombTV[3].bind('<KeyRelease>', lambda event: self.search_combobox(CombTV[3], event))
+        CombTV[4].bind('<KeyRelease>', lambda event: self.search_combobox(CombTV[4], event))
+        CombTV[5].bind('<KeyRelease>', lambda event: self.search_combobox(CombTV[5], event))
+        CombTV[6].bind('<KeyRelease>', lambda event: self.search_combobox(CombTV[6], event))
+        CombTV[7].bind('<KeyRelease>', lambda event: self.search_combobox(CombTV[7], event))
+        CombTV[8].bind('<KeyRelease>', lambda event: self.search_combobox(CombTV[8], event))
 
+        
         self.LBLTV2= tk.Label(self.FrameTreeview,text='Consumo (gr)', background='white', relief='ridge', width=20)
-        self.ENTTV2= tk.Entry(self.FrameTreeview, width=24)
-        self.ENTTV3= tk.Entry(self.FrameTreeview, width=24)
-        self.ENTTV4= tk.Entry(self.FrameTreeview, width=24)
-        self.ENTTV5= tk.Entry(self.FrameTreeview, width=24)
-        self.ENTTV6= tk.Entry(self.FrameTreeview, width=24)
-        self.ENTTV7= tk.Entry(self.FrameTreeview, width=24)
-        self.ENTTV8= tk.Entry(self.FrameTreeview, width=24)
-        self.ENTTV9= tk.Entry(self.FrameTreeview, width=24)
-        self.ENTTV10= tk.Entry(self.FrameTreeview, width=24)
+        self.LBLTV2.grid(row=0,column=1)
+        ENTTV=[]
+        for i in range(9):
+            ENTTV.append(tk.Entry(self.FrameTreeview, width=24))
+            ENTTV[i].grid(row=i+1,column=1)
+                
+        ENTTV[0].bind("<Return>", lambda event: self.llenar_tabla(CombTV[0],0,event))
+        ENTTV[1].bind("<Return>", lambda event: self.llenar_tabla(CombTV[1],1,event))
+        ENTTV[2].bind("<Return>", lambda event: self.llenar_tabla(CombTV[2],2,event))
+        ENTTV[3].bind("<Return>", lambda event: self.llenar_tabla(CombTV[3],3,event))
+        ENTTV[4].bind("<Return>", lambda event: self.llenar_tabla(CombTV[4],4,event))
+        ENTTV[5].bind("<Return>", lambda event: self.llenar_tabla(CombTV[5],5,event))
+        ENTTV[6].bind("<Return>", lambda event: self.llenar_tabla(CombTV[6],6,event))
+        ENTTV[7].bind("<Return>", lambda event: self.llenar_tabla(CombTV[7],7,event))
+        ENTTV[8].bind("<Return>", lambda event: self.llenar_tabla(CombTV[8],8,event))
 
-        self.ENTTV2.bind("<Return>", lambda event: self.llenar_tabla(self.CombTV2,0,event))
-        self.ENTTV3.bind("<Return>", lambda event: self.llenar_tabla(self.CombTV3,1,event))
-        self.ENTTV4.bind("<Return>", lambda event: self.llenar_tabla(self.CombTV4,2,event))
-        self.ENTTV5.bind("<Return>", lambda event: self.llenar_tabla(self.CombTV5,3,event))
-        self.ENTTV6.bind("<Return>", lambda event: self.llenar_tabla(self.CombTV6,4,event))
-        self.ENTTV7.bind("<Return>", lambda event: self.llenar_tabla(self.CombTV7,5,event))
-        self.ENTTV8.bind("<Return>", lambda event: self.llenar_tabla(self.CombTV8,6,event))
-        self.ENTTV9.bind("<Return>", lambda event: self.llenar_tabla(self.CombTV9,7,event))
-        self.ENTTV10.bind("<Return>", lambda event: self.llenar_tabla(self.CombTV10,8,event))
-
-        self.LBLTV3= tk.Label(self.FrameTreeview,text='Calorias (%)', background='white', relief='ridge', width=20)
-        self.LBLTV4= tk.Label(self.FrameTreeview,text='Hidratos de Carb (%)', background='white', relief='ridge', width=20)
-        self.LBLTV5= tk.Label(self.FrameTreeview,text='Proteina (%)', background='white', relief='ridge', width=20)
-        self.LBLTV6= tk.Label(self.FrameTreeview,text='Grasa (%)', background='white', relief='ridge', width=20)
-        self.LBLTV7= tk.Label(self.FrameTreeview,text='Fibra (gr)', background='white', relief='ridge', width=20)
-        
+        LBLTV=[]
+        textos2=['Calorias (%)','Hidratos de Carb (%)','Proteina (%)','Grasa (%)','Fibra (gr)']
+        for j,i in enumerate(textos2):
+            LBLTV.append(tk.Label(self.FrameTreeview,text=i, background='white', relief='ridge', width=20))
+            LBLTV[j].grid(row=0,column=j+2)
+                
         self.list_lbl_tabla=[['0', '0', '0', '0', '0'], ['0', '0', '0', '0', '0'], ['0', '0', '0', '0', '0'], 
                              ['0', '0', '0', '0', '0'], ['0', '0', '0', '0', '0'], ['0', '0', '0', '0', '0'], 
                              ['0', '0', '0', '0', '0'], ['0', '0', '0', '0', '0'], ['0', '0', '0', '0', '0']]
@@ -479,32 +421,7 @@ class mywindow(tk.Frame):
         self.LBLTVTOCarb= tk.Label(self.FrameTreeview,text='0', background='white', relief='ridge', width=20)
         self.LBLTVTOFibra= tk.Label(self.FrameTreeview,text='0', background='white', relief='ridge', width=20)
 
-        
-        self.LBLTV.grid(row=0,column=0)
-        self.CombTV2.grid(row=1,column=0)
-        self.CombTV3.grid(row=2,column=0)
-        self.CombTV4.grid(row=3,column=0)
-        self.CombTV5.grid(row=4,column=0)
-        self.CombTV6.grid(row=5,column=0)
-        self.CombTV7.grid(row=6,column=0)
-        self.CombTV8.grid(row=7,column=0)
-        self.CombTV9.grid(row=8,column=0)
-        self.CombTV10.grid(row=9,column=0)
-        self.LBLTV2.grid(row=0,column=1)
-        self.ENTTV2.grid(row=1,column=1)
-        self.ENTTV3.grid(row=2,column=1)
-        self.ENTTV4.grid(row=3,column=1)
-        self.ENTTV5.grid(row=4,column=1)
-        self.ENTTV6.grid(row=5,column=1)
-        self.ENTTV7.grid(row=6,column=1)
-        self.ENTTV8.grid(row=7,column=1)
-        self.ENTTV9.grid(row=8,column=1)
-        self.ENTTV10.grid(row=9,column=1)
-        self.LBLTV3.grid(row=0,column=2)
-        self.LBLTV4.grid(row=0,column=3)
-        self.LBLTV5.grid(row=0,column=4)
-        self.LBLTV6.grid(row=0,column=5)
-        self.LBLTV7.grid(row=0,column=6)
+        self.LBLTV.grid(row=0,column=0)     
         self.LBLTVTOT.grid(row=10,column=1)
         self.LBLTVTOTCalorias.grid(row=10,column=2)
         self.LBLTVTOTGrasa.grid(row=10,column=3)

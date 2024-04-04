@@ -135,7 +135,3 @@ class mywindow4(tk.Frame):
         btnf1[1].config(command= lambda : self.borrar_elemento_bd(tabla))
         btnf1[2].config(command= lambda : self.guardar_elemento_bd(tabla,entf1))
 
-'''if __name__ == "__main__":
-    root = tk.Tk()
-    root.resizable(0,0)
-    root.mainloop()'''

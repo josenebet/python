@@ -20,22 +20,25 @@ class mywindow2(tk.Frame):
         #Funcion para colocar valores en un listbox de acuerdo al valor de un combobox
         valor=event.widget.get()
         self.listbox1.delete(0,tk.END)
-        conexion = sqlite3.connect("mibasedatos.db")
-        cursor = conexion.cursor()
-        consulta = """
-        SELECT Alimento,Coccion 
-        FROM TABLA_NUTRICIONAL
-        WHERE Tipo = ?
-        """
-        cursor.execute(consulta, (valor,))
-        fila = cursor.fetchone()
-        alimentos = []
-        for fila in cursor.fetchall():
-            alimento_completo = f"{fila[0]} {fila[1]}"
-            alimentos.append(alimento_completo)
-        for lista in alimentos:
-           self.listbox1.insert(tk.END,lista)
-        conexion.close() 
+        if valor=='Todo':
+            self.llenar_listbox()
+        else:
+            conexion = sqlite3.connect("mibasedatos.db")
+            cursor = conexion.cursor()
+            consulta = """
+            SELECT Alimento,Coccion 
+            FROM TABLA_NUTRICIONAL
+            WHERE Tipo = ?
+            """
+            cursor.execute(consulta, (valor,))
+            fila = cursor.fetchone()
+            alimentos = []
+            for fila in cursor.fetchall():
+                alimento_completo = f"{fila[0]} {fila[1]}"
+                alimentos.append(alimento_completo)
+            for lista in alimentos:
+                self.listbox1.insert(tk.END,lista)
+                conexion.close() 
 
     def crear_labl_tabla(self,indice):
         #uncion para crear una tabla de labels
@@ -204,10 +207,10 @@ class mywindow2(tk.Frame):
         for container in framef1p1:
             if container==framef1p1[2]:
                 for i in range (filas_merienda):
-                    self.dict[indice][0].append(tk.Entry(container,width=5))    
+                    self.dict[indice][0].append(tk.Entry(container,width=5,font=("Arial", 10)))    
             else:
                 for i in range(filas_des_alm_cen):
-                    self.dict[indice][0].append(tk.Entry(container,width=5))
+                    self.dict[indice][0].append(tk.Entry(container,width=5,font=("Arial", 10)))
 
         for i in range(filas_des_alm_cen):
             self.dict[indice][0][i].grid(row=i+1,column=0)
@@ -470,6 +473,31 @@ class mywindow2(tk.Frame):
             self.lblframe11[i+j]['text']=fila2[i]
         conexion.close()
 
+    def filter_listbox(self,event):      
+        pattern = self.ENT1.get().lower()
+        if pattern=='':
+            self.listbox1.delete(0,tk.END)
+            self.llenar_listbox()
+        else:
+            updated_list = []
+            for item in self.listbox1.get(0, tk.END):
+                if pattern in item.lower():
+                    updated_list.append(item)
+            self.listbox1.delete(0, tk.END)
+            for item in updated_list:
+                self.listbox1.insert(tk.END, item)
+
+    def llenar_listbox(self):
+        conexion = sqlite3.connect("mibasedatos.db")
+        cursor = conexion.cursor()
+        cursor.execute("SELECT ALIMENTOCOCCION FROM TABLA_NUTRICIONAL")
+        alimentos = cursor.fetchall()
+        conexion.close() 
+        alimentos = list(map(lambda x: x[0], alimentos))
+        alimentos = [alimento.strip("{}") for alimento in alimentos]            
+        for lista in alimentos:
+           self.listbox1.insert(tk.END,lista)
+    
     
     def Create_widget(self):
 
@@ -488,29 +516,23 @@ class mywindow2(tk.Frame):
         #SEGUNDO FRAME PRINCIPAL
         
         self.LBL1=tk.Label(Frame2,text='Opciones del Menu:')
-        self.comb1 = ttk.Combobox(Frame2, values=['Hidrato','Proteina','Grasa'])
+        self.comb1 = ttk.Combobox(Frame2, values=['Todo','Hidrato','Proteina','Grasa'])
         self.comb2 = ttk.Combobox(Frame2, values=['Desayuno','Almuerzo','Merienda','Cena'])
-        self.listbox1= tk.Listbox(Frame2,height=37,width=22, font=('Arial',10))
+        self.ENT1 =tk.Entry(Frame2,width=23)
+        self.listbox1= tk.Listbox(Frame2,height=35,width=22, font=('Arial',10))
         scroll=ttk.Scrollbar(Frame2,orient='vertical',command=self.listbox1.yview)
         self.listbox1.configure(yscrollcommand=scroll.set)
-
-        conexion = sqlite3.connect("mibasedatos.db")
-        cursor = conexion.cursor()
-        cursor.execute("SELECT ALIMENTOCOCCION FROM TABLA_NUTRICIONAL")
-        alimentos = cursor.fetchall()
-        conexion.close() 
-        alimentos = list(map(lambda x: x[0], alimentos))
-        alimentos = [alimento.strip("{}") for alimento in alimentos]            
-        for lista in alimentos:
-           self.listbox1.insert(tk.END,lista)
-        
+        self.llenar_listbox()              
         
         self.LBL1.grid(row=0,column=0,columnspan=2)
         self.comb1.grid(row=2,column=0,columnspan=2)
         self.comb2.grid(row=1,column=0,columnspan=2)
-        self.listbox1.grid(row=3,column=0,sticky='nse')
-        scroll.grid(row=3,column=1,sticky='nse')
+        self.ENT1.grid(row=3,column=0,columnspan=2)
+        self.listbox1.grid(row=4,column=0,sticky='nse')
+        scroll.grid(row=4,column=1,sticky='nse')
         self.comb1.bind("<<ComboboxSelected>>", self.Filtrar_Listbox)
+        self.ENT1.bind("<KeyRelease>", self.filter_listbox)
+
 
         #PRIMER FRAME PRINCIPAL
         
@@ -569,9 +591,3 @@ class mywindow2(tk.Frame):
             self.generar_hojas_notebook(diasem, str(i))               
 
         self.notebook.bind("<<NotebookTabChanged>>",  self.evento_pestaña_cambiada)
-                   
-
-    
-'''if __name__ == "__main__":
-    root = tk.Tk()
-    root.mainloop()'''
