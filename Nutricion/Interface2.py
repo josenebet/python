@@ -494,7 +494,8 @@ class mywindow2(tk.Frame):
         alimentos = cursor.fetchall()
         conexion.close() 
         alimentos = list(map(lambda x: x[0], alimentos))
-        alimentos = [alimento.strip("{}") for alimento in alimentos]            
+        alimentos = [alimento.strip("{}") for alimento in alimentos]
+        alimentos.sort()
         for lista in alimentos:
            self.listbox1.insert(tk.END,lista)
     

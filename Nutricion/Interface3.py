@@ -148,6 +148,7 @@ class mywindow3(tk.Frame):
         for fila in cursor.fetchall():
             alimento_completo = f"{fila[0]} {fila[1]}"
             alimentos.append(alimento_completo)
+        alimentos.sort()
         for lista in alimentos:
           self.listboxf1p2.insert(tk.END,lista)
         conexion.close()
